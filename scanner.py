@@ -81,12 +81,8 @@ def print_addrs(open_addrs: list[tuple[str, int]]) -> None:
 
 
 def parse_ports(port_str: str) -> tuple[int, ...]:
-    """
-    syntax: port,port-range,...
-    use regex to verify input validity, then create a tuple of
-    ports used in port scan. there definitely some room for optimization
-    here, but it won't matter much. go optimize the coroutines instead.
-    """
+    """Parse the port string and return a tuple containing integer ports."""
+
     if not re.match(r"[\d\-,\s]+", port_str):
         raise InvalidFormatError("invalid port string format")
 
@@ -155,7 +151,7 @@ async def consumer(task_queue: asyncio.Queue, result_queue: asyncio.Queue) -> No
 
 
 async def orchestrator(host: str, port_str=None, timeout=2) -> None:
-    """Coordinates the producer and the consumer tasks."""
+    """Coordinate the producer and the consumer tasks."""
 
     task_queue = asyncio.Queue()
     result_queue = asyncio.Queue()
