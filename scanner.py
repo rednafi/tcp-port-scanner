@@ -16,10 +16,13 @@ import re
 from rich import traceback
 from rich.console import Console
 from rich.table import Table
+import uvloop
 
 MAX_CONSUMERS = 1000
 
 traceback.install()
+uvloop.install()
+
 console = Console()
 
 

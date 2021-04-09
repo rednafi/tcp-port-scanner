@@ -7,17 +7,19 @@
 
 ## Description
 
-The title says it all. I just wanted to take a dabble in Python's Asyncio before putting Asyncio driven code in production. TCP scanner is the perfect little program to learn—asynchronous queueing, exception handling, and running blocking code in executor within async code. So here it goes.
+The title says it all. I just wanted to take a dabble in Python's Asyncio before putting Asyncio driven code in production. TCP scanner is the perfect little program to learn—asynchronous queueing, exception handling, and running blocking code in executor. So here it goes.
 
 ## Installation
 
 You don't need another pip package in your life. So, if you want to test this out:
 
 * Clone the repo.
+
 * `cd` to root directory.
-* Fire up a Python virtual environment on run:
+
+* Fire up a Python virtual environment and run:
     ```
-    pip install rich
+    pip install -r requirements.txt
     ```
 
 * Check the options:
