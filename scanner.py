@@ -13,10 +13,10 @@ import ipaddress
 import itertools
 import re
 
+import uvloop
 from rich import traceback
 from rich.console import Console
 from rich.table import Table
-import uvloop
 
 MAX_CONSUMERS = 1000
 
@@ -131,7 +131,9 @@ async def producer(
         raise InvalidFormatError("ip address format is incorrect")
 
     for ip, port in itertools.product(hosts, ports):
-        task_queue.put_nowait((ip, port, timeout))
+        await task_queue.put((ip, port, timeout))
+
+    await asyncio.sleep(0)
 
 
 async def consumer(task_queue: asyncio.Queue, result_queue: asyncio.Queue) -> None:
@@ -145,9 +147,10 @@ async def consumer(task_queue: asyncio.Queue, result_queue: asyncio.Queue) -> No
         except asyncio.TimeoutError:
             pass
         else:
-            result_queue.put_nowait((ip, port))
+            await result_queue.put((ip, port))
         finally:
             task_queue.task_done()
+            await asyncio.sleep(0)
 
 
 async def orchestrator(host: str, port_str=None, timeout=2) -> None:
@@ -174,26 +177,19 @@ async def orchestrator(host: str, port_str=None, timeout=2) -> None:
     ports = parse_ports(port_str)
 
     # Execute the producer.
-    tasks = []
-    await producer(host, ports, timeout, task_queue)
+    tasks = [asyncio.create_task(producer(host, ports, timeout, task_queue))]
 
     # Execute the consumer.
     for _ in range(MAX_CONSUMERS):
         tasks.append(asyncio.create_task(consumer(task_queue, result_queue)))
 
     with console.status("[bold green]Scanning..."):
-        task_queue_complete = asyncio.create_task(task_queue.join())
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        await asyncio.wait(
-            [task_queue_complete, *tasks],
-            return_when=asyncio.FIRST_EXCEPTION,
-        )
-
-        if not task_queue_complete.done():
-            for task in tasks:
-                if task.done():
-                    task.result()
-                    task.cancel()
+        for result in results:
+            if isinstance(result, Exception):
+                raise result
+        await task_queue.join()
 
     open_ports = []
 
