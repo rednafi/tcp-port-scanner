@@ -12,6 +12,7 @@ import asyncio
 import ipaddress
 import itertools
 import re
+import sys
 
 import uvloop
 from rich import traceback
@@ -92,13 +93,13 @@ def parse_ports(port_str: str) -> tuple[int, ...]:
     for port in port_list:
         if "-" in port:
             try:
-                port = [int(p) for p in port.split("-")]
+                port_split = [int(x) for x in port.split("-")]
             except ValueError:
                 raise InvalidFormatError("port string formatting is not correct")
 
             # This handles the case where start range is greater than end range.
-            start = min(port[0], port[-1])
-            end = max(port[0], port[-1])
+            start = min(port_split[0], port_split[-1])
+            end = max(port_split[0], port_split[-1])
 
             for p in range(start, end):
                 if not (-1 < p < 65536):
@@ -106,18 +107,16 @@ def parse_ports(port_str: str) -> tuple[int, ...]:
                 ports.append(p)
 
         else:
-            port = int(port)
-            if not (-1 < port < 65536):
+            p = int(port)
+            if not (-1 < p < 65536):
                 raise InvalidValueError("ports must be between 0 and 65535")
-
-            ports.append(port)
-
+            ports.append(p)
     return tuple(set(ports))
 
 
 async def producer(
     host: str,
-    ports: tuple[str, ...],
+    ports: tuple[int, ...],
     timeout: float,
     task_queue: asyncio.Queue,
 ) -> None:
@@ -156,8 +155,8 @@ async def consumer(task_queue: asyncio.Queue, result_queue: asyncio.Queue) -> No
 async def orchestrator(host: str, port_str=None, timeout=2) -> None:
     """Coordinate the producer and the consumer tasks."""
 
-    task_queue = asyncio.Queue()
-    result_queue = asyncio.Queue()
+    task_queue = asyncio.Queue()  # type: asyncio.Queue
+    result_queue = asyncio.Queue()  # type: asyncio.Queue
 
     if port_str is None:
         # NOTE: This is a string not a tuple.
@@ -177,11 +176,11 @@ async def orchestrator(host: str, port_str=None, timeout=2) -> None:
     ports = parse_ports(port_str)
 
     # Execute the producer.
-    tasks = [asyncio.create_task(producer(host, ports, timeout, task_queue))]
+    tasks = [producer(host, ports, timeout, task_queue)]
 
     # Execute the consumer.
     for _ in range(MAX_CONSUMERS):
-        tasks.append(asyncio.create_task(consumer(task_queue, result_queue)))
+        tasks.append(consumer(task_queue, result_queue))
 
     with console.status("[bold green]Scanning..."):
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -192,7 +191,6 @@ async def orchestrator(host: str, port_str=None, timeout=2) -> None:
         await task_queue.join()
 
     open_ports = []
-
     while result_queue.qsize():
         open_ports.append(await result_queue.get())
 
@@ -232,6 +230,7 @@ class CLI:
 
     def entrypoint(self, argv=None) -> None:
         parser = self.build_parser()
+        args = parser.parse_args(None if sys.argv[1:] else ["-h"])
         args = parser.parse_args(argv)
         # Raise arg errors.
         self.trigger_handler(args)

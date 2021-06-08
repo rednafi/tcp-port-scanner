@@ -11,7 +11,7 @@ The title says it all. I just wanted to take a dabble in Python's Asyncio before
 
 ## Installation
 
-You don't need another pip package in your life. So, if you want to test this out:
+This is such a trivial program, that I really don't want to waste a good name in PyPI. So, if you want to test this out:
 
 * Clone the repo.
 
